@@ -1,7 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FaHeart, FaShoppingCart, FaStar } from 'react-icons/fa';
+import { useDispatch } from 'react-redux';
 
-const Orders = () => { const user = useSelector(state => state.user); const navigate = useNavigate(); const [orders, setOrders] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) { navigate('/login'); return; } axios.get(`/api/orders/user/${user.id}`).then(({ data }) => setOrders(data)).catch(() => {}).finally(() => setLoading(false)); }, [user, navigate]); if (loading) return <div className="container py-12 text-center">Loading orders...</div>; return <div className="container py-12"><h1 className="text-3xl font-bold mb-8">My orders</h1>{!orders.length ? <div className="bg-white p-8 rounded shadow text-center">No orders yet. <Link to="/products" className="text-blue-600">Start shopping</Link></div> : <div className="space-y-4">{orders.map(order => <div key={order._id} className="bg-white rounded shadow p-5"><div className="flex justify-between mb-3"><strong>{order.orderNumber}</strong><span className="capitalize bg-blue-100 text-blue-700 px-3 py-1 rounded">{order.status}</span></div><p className="text-gray-600">{order.items?.length || 0} item(s) · Placed {new Date(order.createdAt).toLocaleDateString()}</p><p className="font-bold mt-2">Total: ${Number(order.total || 0).toFixed(2)}</p></div>)}</div>}</div>; };
-export default Orders;
+const ProductCard = ({ product }) => {
+  const dispatch = useDispatch();
+
+  const addToCart = () => dispatch({ type: 'ADD_TO_CART', payload: product });
+  const addToWishlist = () => dispatch({ type: 'ADD_TO_WISHLIST', payload: product });
+
+  return (
+    <article className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+      <Link to={`/product/${product._id}`} className="block relative h-48 bg-gray-200 overflow-hidden group">
+        <img src={product.thumbnail || 'https://via.placeholder.com/300x200'} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+        {product.originalPrice && product.price < product.originalPrice && (
+          <span className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded text-sm font-bold">Sale</span>
+        )}
+      </Link>
+
+      <div className="p-4">
+        <Link to={`/product/${product._id}`} className="hover:text-blue-600"><h3 className="font-semibold text-lg truncate">{product.name}</h3></Link>
+        <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description || 'Premium quality product'}</p>
+
+        <div className="flex items-center gap-2 mb-3 text-yellow-500">
+          {[...Array(5)].map((_, i) => <FaStar key={i} size={14} className={i < Math.round(product.rating || 0) ? 'text-yellow-500' : 'text-gray-300'} />)}
+          <span className="text-gray-600 text-xs">({product.reviews?.length || 0})</span>
+        </div>
+
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <span className="text-2xl font-bold text-blue-600">${Number(product.price).toFixed(2)}</span>
+            {product.originalPrice && <span className="text-gray-400 line-through ml-2 text-sm">${Number(product.originalPrice).toFixed(2)}</span>}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={addToCart} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded flex items-center justify-center gap-1">
+            <FaShoppingCart /> Add
+          </button>
+          <button onClick={addToWishlist} className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded">
+            <FaHeart />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+export default ProductCard;
