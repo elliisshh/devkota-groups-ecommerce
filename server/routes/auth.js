@@ -1,78 +1,27 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
 const router = express.Router();
+const secret = () => process.env.JWT_SECRET || 'secret_key';
+const publicUser = user => ({ id: user._id, name: user.name, email: user.email, role: user.role });
 
-// Register
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // Check if user exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Create new user
-    user = new User({
-      name,
-      email,
-      password
-    });
-
-    await user.save();
-
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || 'secret_key',
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: { id: user._id, name: user.name, email: user.email }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+    if (!name?.trim() || !email?.trim() || !password || password.length < 8) return res.status(400).json({ message: 'Name, email, and a password of at least 8 characters are required' });
+    if (await User.findOne({ email: email.toLowerCase().trim() })) return res.status(409).json({ message: 'User already exists' });
+    const user = await User.create({ name: name.trim(), email: email.toLowerCase().trim(), password });
+    const token = jwt.sign({ userId: user._id }, secret(), { expiresIn: '7d' });
+    res.status(201).json({ message: 'User registered successfully', token, user: publicUser(user) });
+  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Check password
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || 'secret_key',
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      message: 'Logged in successfully',
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
+    const user = await User.findOne({ email: req.body.email?.toLowerCase().trim() });
+    if (!user || !(await user.comparePassword(req.body.password || ''))) return res.status(401).json({ message: 'Invalid credentials' });
+    const token = jwt.sign({ userId: user._id }, secret(), { expiresIn: '7d' });
+    res.json({ message: 'Logged in successfully', token, user: publicUser(user) });
+  } catch (error) { res.status(500).json({ message: 'Server error', error: error.message }); }
 });
-
 module.exports = router;

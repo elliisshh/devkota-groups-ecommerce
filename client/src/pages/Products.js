@@ -1,61 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
-
-const Products = () => {
-  const [products, setProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get('/api/products');
-        setProducts(response.data);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-bold mb-8">All Products</h1>
-        
-        <div className="mb-8">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-          />
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12">Loading products...</div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">No products found</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map(product => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
+const Products = () => { const [params] = useSearchParams(); const [products, setProducts] = useState([]); const [searchQuery, setSearchQuery] = useState(params.get('search') || ''); const [category, setCategory] = useState(params.get('category') || ''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); useEffect(() => { axios.get('/api/products').then(({ data }) => setProducts(data)).catch(() => setError('Products could not be loaded.')).finally(() => setLoading(false)); }, []); const filtered = products.filter(p => (!category || p.category === category) && (`${p.name} ${p.description || ''}`.toLowerCase().includes(searchQuery.toLowerCase()))); return <div className="py-12"><div className="container mx-auto px-4"><h1 className="text-4xl font-bold mb-8">All Products</h1><div className="grid md:grid-cols-2 gap-3 mb-8"><input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search products..." className="px-4 py-3 border rounded-lg" /><select value={category} onChange={e => setCategory(e.target.value)} className="px-4 py-3 border rounded-lg"><option value="">All categories</option><option>Electronics</option><option>Fashion</option><option>Home & Garden</option><option>Sports</option></select></div>{loading ? <div className="text-center py-12">Loading products...</div> : error ? <div className="text-center py-12 text-red-600">{error}</div> : !filtered.length ? <div className="text-center py-12 text-gray-600">No products found</div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">{filtered.map(product => <ProductCard key={product._id} product={product} />)}</div>}</div></div>; };
 export default Products;
