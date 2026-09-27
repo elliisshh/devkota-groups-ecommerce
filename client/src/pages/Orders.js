@@ -1,13 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const Orders = () => {
-  return (
-    <div className="py-12">
-      <div className="container mx-auto px-4">
-        <h1>Orders Page - Coming Soon</h1>
-      </div>
-    </div>
-  );
-};
-
+const Orders = () => { const user = useSelector(state => state.user); const navigate = useNavigate(); const [orders, setOrders] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { if (!user) { navigate('/login'); return; } axios.get(`/api/orders/user/${user.id}`).then(({ data }) => setOrders(data)).catch(() => {}).finally(() => setLoading(false)); }, [user, navigate]); if (loading) return <div className="container py-12 text-center">Loading orders...</div>; return <div className="container py-12"><h1 className="text-3xl font-bold mb-8">My orders</h1>{!orders.length ? <div className="bg-white p-8 rounded shadow text-center">No orders yet. <Link to="/products" className="text-blue-600">Start shopping</Link></div> : <div className="space-y-4">{orders.map(order => <div key={order._id} className="bg-white rounded shadow p-5"><div className="flex justify-between mb-3"><strong>{order.orderNumber}</strong><span className="capitalize bg-blue-100 text-blue-700 px-3 py-1 rounded">{order.status}</span></div><p className="text-gray-600">{order.items?.length || 0} item(s) · Placed {new Date(order.createdAt).toLocaleDateString()}</p><p className="font-bold mt-2">Total: ${Number(order.total || 0).toFixed(2)}</p></div>)}</div>}</div>; };
 export default Orders;
